@@ -22,11 +22,14 @@ class HomeItemViewModel @Inject constructor(
 
     private val reposList = MutableStateFlow<List<Item>>(emptyList())
     private val savedList = dataBaseRepository.getSavedRepositoryList()
-    private val saved = MutableStateFlow<List<WithSavedData>>(emptyList())
+    private val secondResponse = MutableStateFlow<List<Item>>(emptyList())
+    private val endPointResponse = reposList.combine(secondResponse){first, second ->
+        first + second
+    }
     val t = MutableStateFlow<List<Item>>(emptyList())
 
     val error = LiveEvent<String>()
-    val currentData = reposList.combine(savedList) { repo, saved ->
+    val currentData = endPointResponse.combine(savedList) { repo, saved ->
         repo.map {
             WithSavedData(
                 item = it,
@@ -84,7 +87,8 @@ class HomeItemViewModel @Inject constructor(
     fun findRepo(text: CharSequence?) {
         viewModelScope.launch {
             try {
-                reposList.value = apiReopository.searchRepository(text.toString()).items.take(30)
+                reposList.value = apiReopository.searchRepository(text.toString()).items.take(15)
+                secondResponse.value = apiReopository.searchRepository(text.toString()).items.takeLast(15)
             } catch (e: HttpException) {
                 error.value = e.message()
             }
